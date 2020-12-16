@@ -10,16 +10,22 @@ function m.getToolset(cfg)
   return p.tools[cfg.toolset or 'gcc']
 end
 
-function m.getIncludeDirs(cfg)
+project_include_cache = {}
+project_sysinclude_cache = {}
+
+function m.getIncludeDirs(prj, cfg)
   local flags = {}
-  for _, dir in ipairs(cfg.includedirs) do
+  for _, dir in ipairs(project_include_cache[prj.name]) do
+	print("include: "..dir)
     table.insert(flags, '-I' .. p.quoted(dir))
   end
-  for _, dir in ipairs(cfg.sysincludedir or {}) do
-    table.insert(result, '-isystem ' .. p.quoted(dir))
+  for _, dir in ipairs(project_sysinclude_cache[prj.name]) do
+	print("sysinclude: "..dir)
+    table.insert(flags, '-isystem ' .. p.quoted(dir))
   end
   return flags
 end
+
 
 function m.getCommonFlags(prj, cfg)
   local toolset = m.getToolset(cfg)
@@ -28,7 +34,7 @@ function m.getCommonFlags(prj, cfg)
   flags = table.join(flags, toolset.getundefines(cfg.undefines))
   -- can't use toolset.getincludedirs because some tools that consume
   -- compile_commands.json have problems with relative include paths
-  flags = table.join(flags, m.getIncludeDirs(cfg))
+  flags = table.join(flags, m.getIncludeDirs(prj, cfg))
   flags = table.join(flags, toolset.getforceincludes(cfg))
   if project.iscpp(prj) then
     flags = table.join(flags, toolset.getcxxflags(cfg))
@@ -151,6 +157,13 @@ end
 newaction {
   trigger = 'export-compile-commands',
   description = 'Export compiler commands in JSON Compilation Database Format',
+  onProject = function(prj)
+		printf("Generating Lua for project '%s'", prj.name)
+		for cfg in project.eachconfig(prj) do
+			project_include_cache[prj.name] = prj.includedirs
+			project_sysinclude_cache[prj.name] = prj.sysincludedirs
+		end
+	end,
   execute = execute
 }
 
