@@ -98,6 +98,31 @@ function m.getProjectCommands(prj, cfg)
   return cmds
 end
 
+local function writeCfg(wks, fileName, cmds)
+  p.generate(wks, fileName, function(wks)
+    p.w('[')
+    for i = 1, #cmds do
+      local item = cmds[i]
+      local command = string.format([[
+      {
+        "directory": "%s",
+        "file": "%s",
+        "command": "%s"
+      }]],
+      item.directory,
+      item.file,
+      item.command:gsub('\\', '\\\\'):gsub('"', '\\"'))
+      if i > 1 then
+        p.w(',')
+      end
+      p.w(command)
+    end
+    p.w(']')
+  end) 
+
+end
+
+
 local function execute()
   for wks in p.global.eachWorkspace() do
     local cfgCmds = {}
@@ -110,29 +135,16 @@ local function execute()
         cfgCmds[cfgKey] = table.join(cfgCmds[cfgKey], m.getProjectCommands(prj, cfg))
       end
     end
+
     for cfgKey,cmds in pairs(cfgCmds) do
-      local outfile = string.format('compile_commands/%s.json', cfgKey)
-      p.generate(wks, outfile, function(wks)
-        p.w('[')
-        for i = 1, #cmds do
-          local item = cmds[i]
-          local command = string.format([[
-          {
-            "directory": "%s",
-            "file": "%s",
-            "command": "%s"
-          }]],
-          item.directory,
-          item.file,
-          item.command:gsub('\\', '\\\\'):gsub('"', '\\"'))
-          if i > 1 then
-            p.w(',')
-          end
-          p.w(command)
-        end
-        p.w(']')
-      end)
+	  writeCfg(wks, string.format('compile_commands/%s.json', cfgKey), cmds)
     end
+ 
+    for cfgKey,cmds in pairs(cfgCmds) do
+	  writeCfg(wks, string.format('compile_commands.json', cfgKey), cmds)
+	  break
+    end
+
   end
 end
 
