@@ -10,17 +10,20 @@ function m.getToolset(cfg)
   return p.tools[cfg.toolset or 'gcc']
 end
 
+
+--This cache is to avoid project include dirs not being included in the command line
+--This was the easiest work around I have found thus far
 project_include_cache = {}
 project_sysinclude_cache = {}
 
 function m.getIncludeDirs(prj, cfg)
   local flags = {}
   for _, dir in ipairs(project_include_cache[prj.name]) do
-	print("include: "..dir)
+	--print("include: "..dir)
     table.insert(flags, '-I' .. p.quoted(dir))
   end
   for _, dir in ipairs(project_sysinclude_cache[prj.name]) do
-	print("sysinclude: "..dir)
+	--print("sysinclude: "..dir)
     table.insert(flags, '-isystem ' .. p.quoted(dir))
   end
   return flags
@@ -142,9 +145,10 @@ local function execute()
       end
     end
 
-    for cfgKey,cmds in pairs(cfgCmds) do
-	  writeCfg(wks, string.format('compile_commands/%s.json', cfgKey), cmds)
-    end
+	--Skip running through all configs - we only want one
+    --for cfgKey,cmds in pairs(cfgCmds) do
+	--  writeCfg(wks, string.format('compile_commands/%s.json', cfgKey), cmds)
+    --end
  
     for cfgKey,cmds in pairs(cfgCmds) do
 	  writeCfg(wks, string.format('compile_commands.json', cfgKey), cmds)
@@ -158,7 +162,7 @@ newaction {
   trigger = 'export-compile-commands',
   description = 'Export compiler commands in JSON Compilation Database Format',
   onProject = function(prj)
-		printf("Generating Lua for project '%s'", prj.name)
+		--printf("Gathering includes for project '%s'", prj.name)
 		for cfg in project.eachconfig(prj) do
 			project_include_cache[prj.name] = prj.includedirs
 			project_sysinclude_cache[prj.name] = prj.sysincludedirs
